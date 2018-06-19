@@ -22,7 +22,7 @@ cabal-version:       >=1.10
 executable cetui
   main-is:             Main.hs
   other-modules:
-    CE.Client, UI.DomainChooser
+    CE.Client, UI.DomainChooser, UI.Bookings
   build-depends:       base >=4.10 && <4.11, wreq, aeson, lens, lens-aeson, text, brick, vty, vector, microlens
   hs-source-dirs:      src
   default-language:    Haskell2010

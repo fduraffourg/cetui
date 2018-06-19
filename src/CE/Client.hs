@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module CE.Client (SiteID(..), Site(..), getSites) where
+module CE.Client (SiteID(..), Site(..), getSites, Booking(..), getBookings, sendBooking) where
 
 import Network.Wreq
 import Control.Lens
@@ -26,3 +26,23 @@ getSites = do
     r <- get "http://localhost:9000/v1/sites"
     let jsonSites = r ^.. responseBody . key "result" . values
     return (sequence $ map parseSite jsonSites)
+
+
+data Booking = Booking
+                T.Text -- Booking ID
+                T.Text -- Status
+
+getBookings :: SiteID -> IO (Maybe [Booking])
+getBookings (SiteID siteID) = do
+    let url = "http://localhost:9000/v1/travel/sites/" ++ (T.unpack siteID) ++ "/bookings?size=1000"
+    r <- get (url)
+    let jsonBookings = r ^.. responseBody . key "result" . values
+    return (sequence $ map parseBooking jsonBookings)
+
+parseBooking :: Value -> Maybe Booking
+parseBooking obj = Booking
+    <$> obj ^? key "bookingID" . _String
+    <*> obj ^? key "status" . _String
+
+sendBooking :: Site -> IO ()
+sendBooking site = return ()

@@ -4,6 +4,7 @@ module Main where
 
 import qualified CE.Client as CE
 import qualified UI.DomainChooser as DC
+import UI.Bookings
 
 main :: IO ()
 main = do
@@ -13,8 +14,6 @@ main = do
         Just sites ->
             do
                 _ <- putStrLn "Done fetching sites"
-                site <- DC.letUserSelectSite sites
-                _ <- putStrLn "Choosen site"
-                _ <- putStrLn $ show site
+                _ <- runBookingsUI $ head sites
                 return ()
         Nothing -> putStrLn "Failed to fetch sites"
