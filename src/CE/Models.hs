@@ -11,6 +11,7 @@ module CE.Models
     , Extent(..)
     , Coordinate(..)
     , DomainID(..)
+    , HttpResult(..)
     ) where
 
 import Data.Aeson
@@ -105,3 +106,14 @@ data Booking = Booking
                 T.Text -- Booking ID
                 T.Text -- Status
                 (Maybe T.Text) -- Vehicle
+
+instance FromJSON Booking where
+    parseJSON = withObject "Booking" $ \v -> Booking
+        <$> v .: "bookingID"
+        <*> v .: "status"
+        <*> v .:? "vehicleID"
+
+data HttpResult a = HttpResult a
+
+instance FromJSON a => FromJSON (HttpResult a) where
+    parseJSON = withObject "Result" $ \v -> HttpResult <$> v .: "result"

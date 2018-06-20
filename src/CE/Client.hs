@@ -41,21 +41,13 @@ getSiteExtent (SiteID siteID) = do
                 _ -> Nothing
 
 
-getBookings :: SiteID -> IO (Maybe [Booking])
+getBookings :: SiteID -> IO [Booking]
 getBookings (SiteID siteID) = do
     let url = "http://localhost:9000/v1/travel/sites/" ++ (T.unpack siteID) ++ "/bookings?size=1000"
-    r <- get (url)
-    let jsonBookings = r ^.. responseBody . key "result" . values
-    return (sequence $ map parseBooking jsonBookings)
-
-parseBooking :: Value -> Maybe Booking
-parseBooking obj = fmap (\b -> b vehicleID) builder
-    where
-        vehicleID = obj ^? key "vehicleID" . _String
-        builder = Booking
-            <$> obj ^? key "bookingID" . _String
-            <*> obj ^? key "status" . _String
-
+    r <- get url
+    json <- asJSON r :: IO (Response (HttpResult [Booking]))
+    let (HttpResult bookings) = json ^. responseBody
+    return bookings
 
 sendBooking :: Site -> Extent -> IO ()
 sendBooking site (Extent tl br) = do

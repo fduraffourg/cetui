@@ -52,10 +52,8 @@ appEvent s (AppEvent RefreshBookingsEvent) = liftIO updateBookings >>= M.continu
     where
         updateBookings :: IO State
         updateBookings = do
-            res <- CE.getBookings siteID
-            case res of
-                Just bookings -> return $ initialState site extent bookings
-                Nothing -> return s
+            bookings <- CE.getBookings siteID
+            return $ initialState site extent bookings
         State site extent _ = s
         M.Site siteID _ _ = site
 appEvent l _ = M.continue l
