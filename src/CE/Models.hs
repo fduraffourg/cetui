@@ -104,3 +104,4 @@ instance ToJSON SRID where
 data Booking = Booking
                 T.Text -- Booking ID
                 T.Text -- Status
+                (Maybe T.Text) -- Vehicle

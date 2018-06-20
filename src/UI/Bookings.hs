@@ -40,7 +40,7 @@ drawUI (State site _ bookings) = [ui]
         content = L.renderList renderElement False bookings
 
 renderElement :: Bool -> M.Booking -> Widget n
-renderElement _ (M.Booking bookingID bookingStatus) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus)
+renderElement _ (M.Booking bookingID bookingStatus vehicle) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus ++ " - " ++ show vehicle)
 
 appEvent :: State -> BrickEvent () Event -> EventM () (Next State)
 appEvent s@(State site extent _) (BT.VtyEvent e) =

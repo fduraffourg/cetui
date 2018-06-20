@@ -49,9 +49,13 @@ getBookings (SiteID siteID) = do
     return (sequence $ map parseBooking jsonBookings)
 
 parseBooking :: Value -> Maybe Booking
-parseBooking obj = Booking
-    <$> obj ^? key "bookingID" . _String
-    <*> obj ^? key "status" . _String
+parseBooking obj = fmap (\b -> b vehicleID) builder
+    where
+        vehicleID = obj ^? key "vehicleID" . _String
+        builder = Booking
+            <$> obj ^? key "bookingID" . _String
+            <*> obj ^? key "status" . _String
+
 
 sendBooking :: Site -> Extent -> IO ()
 sendBooking site (Extent tl br) = do
