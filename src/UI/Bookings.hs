@@ -23,30 +23,30 @@ import qualified Control.Concurrent
 import Control.Monad.IO.Class
 
 import qualified CE.Client as CE
-import CE.Models
+import qualified CE.Models as M
 
-data State = State Site (L.List () Booking)
+data State = State M.Site M.Extent (L.List () M.Booking)
 
 data Event = RefreshBookingsEvent
 
-initialState :: Site -> [Booking] -> State
-initialState site bookings = State site (L.list () (Vec.fromList bookings) 3)
+initialState :: M.Site -> M.Extent -> [M.Booking] -> State
+initialState site extent bookings = State site extent (L.list () (Vec.fromList bookings) 3)
 
 drawUI :: State -> [Widget ()]
-drawUI (State site bookings) = [ui]
+drawUI (State site _ bookings) = [ui]
     where
         label = str ("Bookings for site " ++ show site)
         ui = B.borderWithLabel label $ C.center content
         content = L.renderList renderElement False bookings
 
-renderElement :: Bool -> Booking -> Widget n
-renderElement _ (Booking bookingID bookingStatus) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus)
+renderElement :: Bool -> M.Booking -> Widget n
+renderElement _ (M.Booking bookingID bookingStatus) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus)
 
 appEvent :: State -> BrickEvent () Event -> EventM () (Next State)
-appEvent s@(State site _) (BT.VtyEvent e) =
+appEvent s@(State site extent _) (BT.VtyEvent e) =
     case e of
         V.EvKey V.KEsc _ -> M.halt s
-        V.EvKey (V.KChar 'n') _ -> liftIO (CE.sendBooking site undefined) *> M.continue s
+        V.EvKey (V.KChar 'n') _ -> liftIO (CE.sendBooking site extent) *> M.continue s
         _ -> M.continue s
 appEvent s (AppEvent RefreshBookingsEvent) = liftIO updateBookings >>= M.continue
     where
@@ -54,10 +54,10 @@ appEvent s (AppEvent RefreshBookingsEvent) = liftIO updateBookings >>= M.continu
         updateBookings = do
             res <- CE.getBookings siteID
             case res of
-                Just bookings -> return $ initialState site bookings
+                Just bookings -> return $ initialState site extent bookings
                 Nothing -> return s
-        State site _ = s
-        Site siteID _ _ = site
+        State site extent _ = s
+        M.Site siteID _ _ = site
 appEvent l _ = M.continue l
 
 customAttr :: A.AttrName
@@ -76,8 +76,8 @@ app = M.App { M.appDraw = drawUI
             , M.appAttrMap = const theMap
             }
 
-runBookingsUI :: Site -> [Booking] -> IO ()
-runBookingsUI site bookings =
+runBookingsUI :: M.Site -> M.Extent -> IO ()
+runBookingsUI site extent =
     do
         config <- Graphics.Vty.Config.standardIOConfig
         eventChan <- Brick.BChan.newBChan 10
@@ -85,7 +85,7 @@ runBookingsUI site bookings =
         _  <- M.customMain
                 (Graphics.Vty.mkVty config)
                 (Just eventChan)
-                app (initialState site bookings)
+                app (initialState site extent [])
         return ()
 
 sendPeriodicRefresh :: Brick.BChan.BChan Event -> IO ()
