@@ -17,10 +17,11 @@ import Brick
 import qualified Data.Vector as Vec
 
 import qualified CE.Client as CE
+import CE.Models
 
-data State = State (L.List () CE.Site)
+data State = State (L.List () Site)
 
-initialState :: [CE.Site] -> State
+initialState :: [Site] -> State
 initialState sites = State (L.list () (Vec.fromList sites) 1)
 
 drawUI :: State -> [Widget ()]
@@ -62,7 +63,7 @@ app = M.App { M.appDraw = drawUI
             , M.appAttrMap = const theMap
             }
 
-letUserSelectSite :: [CE.Site] -> IO (Maybe CE.Site)
+letUserSelectSite :: [Site] -> IO (Maybe Site)
 letUserSelectSite sites =
     do
         State finalList  <- M.defaultMain app (initialState sites)

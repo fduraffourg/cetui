@@ -23,12 +23,13 @@ import qualified Control.Concurrent
 import Control.Monad.IO.Class
 
 import qualified CE.Client as CE
+import CE.Models
 
-data State = State CE.Site (L.List () CE.Booking)
+data State = State Site (L.List () Booking)
 
 data Event = RefreshBookingsEvent
 
-initialState :: CE.Site -> [CE.Booking] -> State
+initialState :: Site -> [Booking] -> State
 initialState site bookings = State site (L.list () (Vec.fromList bookings) 3)
 
 drawUI :: State -> [Widget ()]
@@ -38,14 +39,14 @@ drawUI (State site bookings) = [ui]
         ui = B.borderWithLabel label $ C.center content
         content = L.renderList renderElement False bookings
 
-renderElement :: Bool -> CE.Booking -> Widget n
-renderElement _ (CE.Booking bookingID bookingStatus) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus)
+renderElement :: Bool -> Booking -> Widget n
+renderElement _ (Booking bookingID bookingStatus) = str (T.unpack bookingID ++ " - " ++ T.unpack bookingStatus)
 
 appEvent :: State -> BrickEvent () Event -> EventM () (Next State)
 appEvent s@(State site _) (BT.VtyEvent e) =
     case e of
         V.EvKey V.KEsc _ -> M.halt s
-        V.EvKey (V.KChar 'n') _ -> liftIO (CE.sendBooking site) *> M.continue s
+        V.EvKey (V.KChar 'n') _ -> liftIO (CE.sendBooking site undefined) *> M.continue s
         _ -> M.continue s
 appEvent s (AppEvent RefreshBookingsEvent) = liftIO updateBookings >>= M.continue
     where
@@ -56,7 +57,7 @@ appEvent s (AppEvent RefreshBookingsEvent) = liftIO updateBookings >>= M.continu
                 Just bookings -> return $ initialState site bookings
                 Nothing -> return s
         State site _ = s
-        CE.Site siteID _ _ = site
+        Site siteID _ _ = site
 appEvent l _ = M.continue l
 
 customAttr :: A.AttrName
@@ -75,7 +76,7 @@ app = M.App { M.appDraw = drawUI
             , M.appAttrMap = const theMap
             }
 
-runBookingsUI :: CE.Site -> [CE.Booking] -> IO ()
+runBookingsUI :: Site -> [Booking] -> IO ()
 runBookingsUI site bookings =
     do
         config <- Graphics.Vty.Config.standardIOConfig
