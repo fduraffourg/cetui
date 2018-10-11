@@ -1,71 +1,57 @@
 {-# LANGUAGE OverloadedStrings #-}
-module UI.DomainChooser (letUserSelectSite) where
 
-import Data.Monoid
-import Lens.Micro ((^.))
+module UI.DomainChooser
+  ( State
+  , handleEvent
+  , drawUI
+  , initialState
+  , getSelectedSite
+  ) where
+
+import Brick
+import qualified Brick.AttrMap as A
 import qualified Brick.Main as M
 import qualified Brick.Types as T
+import Brick.Util (fg, on)
 import qualified Brick.Widgets.Border as B
 import Brick.Widgets.Border.Style
-import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Center as C
-import qualified Brick.AttrMap as A
-import qualified Graphics.Vty as V
-import Brick.Widgets.Core
-import Brick.Util (fg, on)
-import Brick
+import qualified Brick.Widgets.List as L
+import Data.Monoid
 import qualified Data.Vector as Vec
+import qualified Graphics.Vty as V
 
 import qualified CE.Client as CE
 import CE.Models
+import qualified UI.Event as UE
 
-data State = State (L.List () Site)
+data State =
+  State (L.List () Site)
 
 initialState :: [Site] -> State
 initialState sites = State (L.list () (Vec.fromList sites) 1)
 
 drawUI :: State -> [Widget ()]
 drawUI (State l) = [ui]
-    where
-        label = str " Sites "
-        box = B.borderWithLabel label $
-              L.renderList listDrawElement True l
-        ui = C.vCenter $ vBox [ C.hCenter box ]
+  where
+    label = str " Sites "
+    box = B.borderWithLabel label $ L.renderList listDrawElement True l
+    ui = C.vCenter $ vBox [C.hCenter box]
 
 listDrawElement :: (Show a) => Bool -> a -> Widget ()
 listDrawElement sel a =
-    let selStr s = if sel
-                   then str $ "<" <> s <> ">"
-                   else str s
-    in C.hCenter $ selStr $ show a
+  let selStr s =
+        if sel
+          then str $ "<" <> s <> ">"
+          else str s
+   in C.hCenter $ selStr $ show a
 
-appEvent :: State -> BrickEvent () e -> EventM () (Next State)
-appEvent (State l) (T.VtyEvent e) =
-    case e of
-        V.EvKey V.KEsc [] -> M.halt (State $ L.listClear l)
-        V.EvKey V.KEnter [] -> M.halt (State l)
-        _ -> M.continue =<< State <$> L.handleListEventVi L.handleListEvent e l
-appEvent l _ = M.continue l
+handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
+handleEvent (State l) (T.VtyEvent e) =
+  case e of
+    V.EvKey V.KEsc [] -> M.halt (State $ L.listClear l)
+    _ -> M.continue =<< State <$> L.handleListEventVi L.handleListEvent e l
+handleEvent l _ = M.continue l
 
-customAttr :: A.AttrName
-customAttr = L.listSelectedAttr <> "custom"
-
-theMap :: A.AttrMap
-theMap = A.attrMap V.defAttr
-    [ (L.listSelectedAttr,    V.withStyle V.defAttr V.standout)
-    ]
-
-app :: M.App State e ()
-app = M.App { M.appDraw = drawUI
-            , M.appChooseCursor = M.showFirstCursor
-            , M.appHandleEvent = appEvent
-            , M.appStartEvent = return
-            , M.appAttrMap = const theMap
-            }
-
-letUserSelectSite :: [Site] -> IO (Maybe Site)
-letUserSelectSite sites =
-    do
-        State finalList  <- M.defaultMain app (initialState sites)
-        return $ fmap snd $ L.listSelectedElement finalList
-
+getSelectedSite :: State -> Maybe Site
+getSelectedSite (State finalList) = snd <$> L.listSelectedElement finalList
