@@ -30,13 +30,13 @@ data State
 
 main :: IO ()
 main = do
+  eventChan <- Brick.BChan.newBChan 10
   maybeSites <- CE.getSites
   let state =
         case maybeSites of
-          Just sites -> StateDC $ DC.initialState sites
+          Just sites -> StateDC $ DC.initialState eventChan sites
           Nothing -> Message "Failed to get the list of sites"
   config <- Graphics.Vty.Config.standardIOConfig
-  eventChan <- Brick.BChan.newBChan 10
   forkIO (sendPeriodicRefresh eventChan)
   M.customMain (V.mkVty config) (Just eventChan) app state
   return ()
@@ -68,10 +68,8 @@ drawUI s = [mainWidget s <=> UI.Status.drawUI]
 
 appEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 appEvent s (T.VtyEvent (V.EvKey (V.KChar 'q') [])) = M.halt s
-appEvent (StateDC s) (T.VtyEvent (V.EvKey V.KEnter [])) =
-  case DC.getSelectedSite s of
-    Just site -> switchToSelectedSite site
-    Nothing -> M.continue (StateDC s)
+appEvent (StateDC s) (T.AppEvent (UE.SelectSite site)) =
+  switchToSelectedSite site
 appEvent (StateDC s) event = (StateDC <$>) <$> DC.handleEvent s event
 appEvent (StateBO s) event = (StateBO <$>) <$> BO.handleEvent s event
 appEvent s _ = M.continue s

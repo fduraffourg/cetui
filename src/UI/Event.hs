@@ -1,3 +1,9 @@
-module UI.Event (Event(..)) where
+module UI.Event
+  ( Event(..)
+  ) where
 
-data Event = PeriodicRefresh
+import qualified CE.Models as M
+
+data Event
+  = PeriodicRefresh
+  | SelectSite M.Site
