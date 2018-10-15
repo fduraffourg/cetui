@@ -8,19 +8,20 @@ import qualified CE.Models
 import qualified UI.Bookings as BO
 import qualified UI.DomainChooser as DC
 import qualified UI.Event as UE
+import qualified UI.Status
 
 import Brick
 import qualified Brick.AttrMap as A
-import qualified Brick.Main as M
 import qualified Brick.BChan
+import qualified Brick.Main as M
 import qualified Brick.Types as T
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty.Config
 
-import Control.Monad.IO.Class
 import Control.Concurrent
+import Control.Monad.IO.Class
 
 data State
   = StateDC DC.State
@@ -52,12 +53,18 @@ app =
 
 theMap :: A.AttrMap
 theMap =
-  A.attrMap V.defAttr [(L.listSelectedAttr, V.withStyle V.defAttr V.standout)]
+  A.attrMap
+    V.defAttr
+    [ (L.listSelectedAttr, V.withStyle V.defAttr V.standout)
+    , (UI.Status.statusAttr, V.withStyle V.defAttr V.reverseVideo)
+    ]
 
 drawUI :: State -> [Widget ()]
-drawUI (StateDC s) = DC.drawUI s
-drawUI (StateBO s) = BO.drawUI s
-drawUI (Message message) = [C.vCenter $ C.hCenter $ str message]
+drawUI s = [mainWidget s <=> UI.Status.drawUI]
+  where
+    mainWidget (StateDC s) = DC.drawUI s
+    mainWidget (StateBO s) = BO.drawUI s
+    mainWidget (Message message) = C.vCenter $ C.hCenter $ str message
 
 appEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 appEvent s (T.VtyEvent (V.EvKey (V.KChar 'q') [])) = M.halt s
@@ -80,8 +87,7 @@ switchToSelectedSite site = liftIO getExtent >>= createState >>= refreshNow
     refreshNow state = appEvent state (T.AppEvent UE.PeriodicRefresh)
 
 sendPeriodicRefresh :: Brick.BChan.BChan UE.Event -> IO ()
-sendPeriodicRefresh chan =
-    do
-        _ <- Brick.BChan.writeBChan chan UE.PeriodicRefresh
-        _ <- Control.Concurrent.threadDelay 1000000
-        sendPeriodicRefresh chan
+sendPeriodicRefresh chan = do
+  _ <- Brick.BChan.writeBChan chan UE.PeriodicRefresh
+  _ <- Control.Concurrent.threadDelay 1000000
+  sendPeriodicRefresh chan

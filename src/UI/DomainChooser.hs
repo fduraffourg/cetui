@@ -31,8 +31,8 @@ data State =
 initialState :: [Site] -> State
 initialState sites = State (L.list () (Vec.fromList sites) 1)
 
-drawUI :: State -> [Widget ()]
-drawUI (State l) = [ui]
+drawUI :: State -> Widget ()
+drawUI (State l) = ui
   where
     label = str " Sites "
     box = B.borderWithLabel label $ L.renderList listDrawElement True l
