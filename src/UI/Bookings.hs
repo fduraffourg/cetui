@@ -18,6 +18,7 @@ import qualified Brick.Widgets.Center as C
 import Brick.Widgets.Core
 import qualified Brick.Widgets.List as L
 import qualified Control.Concurrent
+import Control.Exception
 import Control.Monad.IO.Class
 import Data.Monoid
 import qualified Data.Text as T
@@ -51,18 +52,41 @@ renderElement _ (M.Booking bookingID bookingStatus vehicle) =
      " - " ++ T.unpack bookingStatus ++ " - " ++ show vehicle)
 
 handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
-handleEvent s@(State site extent _) (BT.VtyEvent e) =
+handleEvent s@(State site extent list) (BT.VtyEvent e) =
   case e of
     V.EvKey (V.KChar 'n') _ ->
       liftIO (CE.sendBooking site extent) *> M.continue s
-    _ -> M.continue s
+    V.EvKey (V.KChar 'c') _ -> liftIO (cancelBooking list) >> M.continue s
+    V.EvKey (V.KChar 'm') _ -> liftIO (rematchBooking list) >> M.continue s
+    _ ->
+      State site extent <$> L.handleListEventVi L.handleListEvent e list >>=
+      M.continue
 handleEvent s (AppEvent UE.PeriodicRefresh) =
-  liftIO updateBookings >>= M.continue
-  where
-    updateBookings :: IO State
-    updateBookings = do
-      bookings <- CE.getBookings siteID
-      return $ initialState site extent bookings
-    State site extent _ = s
-    M.Site siteID _ _ = site
+  liftIO (updateBookings s) >>= M.continue
 handleEvent l _ = M.continue l
+
+updateBookings :: State -> IO State
+updateBookings (State site extent list) = do
+  let M.Site siteID _ _ = site
+  let selected = L.listSelected list
+  bookings <- CE.getBookings siteID
+  let newList = L.listReplace (Vec.fromList bookings) selected list
+  return $ State site extent newList
+
+cancelBooking :: L.List () M.Booking -> IO ()
+cancelBooking list =
+  case L.listSelectedElement list of
+    Just (_, booking) -> recoverIO $ CE.cancelBooking booking
+    Nothing -> return ()
+
+rematchBooking :: L.List () M.Booking -> IO ()
+rematchBooking list =
+  case L.listSelectedElement list of
+    Just (_, booking) -> recoverIO $ CE.rematchBooking booking
+    Nothing -> return ()
+
+recoverIO :: IO () -> IO ()
+recoverIO io = catch io catcher
+  where
+    catcher :: SomeException -> IO ()
+    catcher _ = return ()
