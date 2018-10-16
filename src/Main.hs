@@ -23,10 +23,18 @@ import qualified Graphics.Vty.Config
 import Control.Concurrent
 import Control.Monad.IO.Class
 
-data State
-  = StateDC DC.State
-  | StateBO BO.State
-  | Message String
+data State = State
+  { stateSite :: Maybe CE.Models.Site
+  , stateView :: StateView
+  }
+
+data StateView
+  = StateViewDC DC.State
+  | StateViewBO BO.State
+  | StateViewMSG String
+
+updateView :: State -> StateView -> State
+updateView s v = s {stateView = v}
 
 main :: IO ()
 main = do
@@ -34,8 +42,10 @@ main = do
   maybeSites <- CE.getSites
   let state =
         case maybeSites of
-          Just sites -> StateDC $ DC.initialState eventChan sites
-          Nothing -> Message "Failed to get the list of sites"
+          Just sites ->
+            State Nothing (StateViewDC $ DC.initialState eventChan sites)
+          Nothing ->
+            State Nothing (StateViewMSG "Failed to get the list of sites")
   config <- Graphics.Vty.Config.standardIOConfig
   forkIO (sendPeriodicRefresh eventChan)
   M.customMain (V.mkVty config) (Just eventChan) app state
@@ -60,27 +70,30 @@ theMap =
     ]
 
 drawUI :: State -> [Widget ()]
-drawUI s = [mainWidget s <=> UI.Status.drawUI]
+drawUI s = [mainWidget (stateView s) <=> UI.Status.drawUI]
   where
-    mainWidget (StateDC s) = DC.drawUI s
-    mainWidget (StateBO s) = BO.drawUI s
-    mainWidget (Message message) = C.vCenter $ C.hCenter $ str message
+    mainWidget (StateViewDC s) = DC.drawUI s
+    mainWidget (StateViewBO s) = BO.drawUI s
+    mainWidget (StateViewMSG message) = C.vCenter $ C.hCenter $ str message
 
 appEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 appEvent s (T.VtyEvent (V.EvKey (V.KChar 'q') [])) = M.halt s
-appEvent (StateDC s) (T.AppEvent (UE.SelectSite site)) =
-  switchToSelectedSite site
-appEvent (StateDC s) event = (StateDC <$>) <$> DC.handleEvent s event
-appEvent (StateBO s) event = (StateBO <$>) <$> BO.handleEvent s event
-appEvent s _ = M.continue s
+appEvent _ (T.AppEvent (UE.SelectSite site)) = switchToSelectedSite site
+appEvent s event = fmap (updateView s) <$> viewEvent (stateView s) event
+
+viewEvent :: StateView -> BrickEvent () UE.Event -> EventM () (Next StateView)
+viewEvent (StateViewDC s) event = (StateViewDC <$>) <$> DC.handleEvent s event
+viewEvent (StateViewBO s) event = (StateViewBO <$>) <$> BO.handleEvent s event
+viewEvent s _ = M.continue s
 
 switchToSelectedSite :: CE.Models.Site -> EventM () (Next State)
 switchToSelectedSite site = liftIO getExtent >>= createState >>= refreshNow
   where
     getExtent = CE.getSiteExtent siteID
     createState (Just extent) =
-      return $ StateBO $ BO.initialState site extent []
-    createState Nothing = return $ Message "Failed to get extent for site"
+      return $ State (Just site) $ StateViewBO $ BO.initialState site extent []
+    createState Nothing =
+      return $ State (Just site) $ StateViewMSG "Failed to get extent for site"
     CE.Models.Site siteID _ _ = site
     refreshNow state = appEvent state (T.AppEvent UE.PeriodicRefresh)
 
