@@ -37,8 +37,8 @@ initialState :: M.Site -> M.Extent -> [M.Booking] -> State
 initialState site extent bookings =
   State site extent (L.list () (Vec.fromList bookings) 1)
 
-drawUI :: State -> [Widget ()]
-drawUI (State site _ bookings) = [ui]
+drawUI :: State -> Widget ()
+drawUI (State site _ bookings) = ui
   where
     label = str ("Bookings for site " ++ show site)
     ui = B.borderWithLabel label $ C.center content
