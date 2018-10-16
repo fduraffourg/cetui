@@ -57,6 +57,7 @@ handleEvent s@(State site extent list) (BT.VtyEvent e) =
     V.EvKey (V.KChar 'n') _ ->
       liftIO (CE.sendBooking site extent) *> M.continue s
     V.EvKey (V.KChar 'c') _ -> liftIO (cancelBooking list) >> M.continue s
+    V.EvKey (V.KChar 'm') _ -> liftIO (rematchBooking list) >> M.continue s
     _ ->
       State site extent <$> L.handleListEventVi L.handleListEvent e list >>=
       M.continue
@@ -76,6 +77,12 @@ cancelBooking :: L.List () M.Booking -> IO ()
 cancelBooking list =
   case L.listSelectedElement list of
     Just (_, booking) -> recoverIO $ CE.cancelBooking booking
+    Nothing -> return ()
+
+rematchBooking :: L.List () M.Booking -> IO ()
+rematchBooking list =
+  case L.listSelectedElement list of
+    Just (_, booking) -> recoverIO $ CE.rematchBooking booking
     Nothing -> return ()
 
 recoverIO :: IO () -> IO ()

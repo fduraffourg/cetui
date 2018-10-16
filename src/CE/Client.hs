@@ -6,6 +6,7 @@ module CE.Client
   , sendBooking
   , getSiteExtent
   , cancelBooking
+  , rematchBooking
   ) where
 
 import CE.Models
@@ -87,4 +88,12 @@ cancelBooking (Booking bookingID _ _) = do
         "http://localhost:9000/v2/travel/bookings/" ++ (T.unpack bookingID) ++
         "/cancelByOperator"
   _ <- put url BS.empty
+  return ()
+
+rematchBooking :: Booking -> IO ()
+rematchBooking (Booking bookingID _ _) = do
+  let url =
+        "http://localhost:9000/v2/travel/bookings/" ++ (T.unpack bookingID) ++
+        "/requestRematch"
+  _ <- post url BS.empty
   return ()
