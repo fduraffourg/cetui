@@ -20,69 +20,80 @@ import qualified Brick.Widgets.List as L
 import qualified Control.Concurrent
 import Control.Exception
 import Control.Monad.IO.Class
+import qualified Data.Map.Lazy as Map
+import Data.Maybe
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 
-import qualified CE.Client as CE
-import qualified CE.Models as M
+import qualified CE.Client as CEC
+import qualified CE.Models as CE
+import CE.Vehicle
+import CE.Booking
+import CE.Core
 import qualified UI.Event as UE
+import UI.Bookings.Internal
 
-data State =
-  State M.Site
-        M.Extent
-        (L.List () M.Booking)
+data State = State
+  { stateSite :: CE.Site
+  , stateSiteExtent :: CE.Extent
+  , stateBookings :: (L.List () SBooking)
+  , stateVehicleNames :: VehicleID -> T.Text
+  }
 
-initialState :: M.Site -> M.Extent -> [M.Booking] -> State
-initialState site extent bookings =
-  State site extent (L.list () (Vec.fromList bookings) 1)
+initialState :: CE.Site -> CE.Extent -> [Booking] -> [Vehicle] -> State
+initialState site extent bookings vehicles =
+  State site extent (L.list () (Vec.fromList sbookings) 1) vehicleNames
+  where
+    vehicleNames :: VehicleID -> T.Text
+    vehicleNames vid =
+      fromMaybe (vehicleIDToText vid) $ Map.lookup vid vehiclesMap
+    vehiclesMap =
+      Map.fromList $ (\v -> (vehicleID v, vehicleName v)) <$> vehicles
+    sbookings = listSBookings bookings vehicleNames
 
 drawUI :: State -> Widget ()
-drawUI (State site _ bookings) = ui
+drawUI (State site _ bookings _) = ui
   where
     label = str ("Bookings for site " ++ show site)
     ui = B.borderWithLabel label $ C.center content
-    content = L.renderList renderElement False bookings
-
-renderElement :: Bool -> M.Booking -> Widget n
-renderElement _ (M.Booking bookingID bookingStatus vehicle) =
-  str
-    (T.unpack bookingID ++
-     " - " ++ T.unpack bookingStatus ++ " - " ++ show vehicle)
+    content = L.renderList renderSBooking False bookings
 
 handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
-handleEvent s@(State site extent list) (BT.VtyEvent e) =
+handleEvent s@(State (CE.Site siteID _ _) extent list _) (BT.VtyEvent e) =
   case e of
     V.EvKey (V.KChar 'n') _ ->
-      liftIO (CE.sendBooking site extent) *> M.continue s
-    V.EvKey (V.KChar 'c') _ -> liftIO (cancelBooking list) >> M.continue s
-    V.EvKey (V.KChar 'm') _ -> liftIO (rematchBooking list) >> M.continue s
+      liftIO (sendBookingDemand siteID extent) *> M.continue s
+    V.EvKey (V.KChar 'c') _ -> liftIO (cancelSBooking list) >> M.continue s
+    V.EvKey (V.KChar 'm') _ -> liftIO (rematchSBooking list) >> M.continue s
     _ ->
-      State site extent <$> L.handleListEventVi L.handleListEvent e list >>=
+      (\l -> s {stateBookings = l}) <$>
+      L.handleListEventVi L.handleListEvent e list >>=
       M.continue
 handleEvent s (AppEvent UE.PeriodicRefresh) =
-  liftIO (updateBookings s) >>= M.continue
+  liftIO (updateSBookings s) >>= M.continue
 handleEvent l _ = M.continue l
 
-updateBookings :: State -> IO State
-updateBookings (State site extent list) = do
-  let M.Site siteID _ _ = site
+updateSBookings :: State -> IO State
+updateSBookings state@(State site extent list vhcNames) = do
+  let CE.Site siteID _ _ = site
   let selected = L.listSelected list
-  bookings <- CE.getBookings siteID
-  let newList = L.listReplace (Vec.fromList bookings) selected list
-  return $ State site extent newList
+  bookings <- listForSiteFromCE siteID
+  let sbookings = listSBookings bookings vhcNames
+  let newList = L.listReplace (Vec.fromList sbookings) selected list
+  return $ state {stateBookings = newList}
 
-cancelBooking :: L.List () M.Booking -> IO ()
-cancelBooking list =
+cancelSBooking :: L.List () SBooking -> IO ()
+cancelSBooking list =
   case L.listSelectedElement list of
-    Just (_, booking) -> recoverIO $ CE.cancelBooking booking
+    Just (_, booking) -> recoverIO $ cancelBooking (sbookingID booking)
     Nothing -> return ()
 
-rematchBooking :: L.List () M.Booking -> IO ()
-rematchBooking list =
+rematchSBooking :: L.List () SBooking -> IO ()
+rematchSBooking list =
   case L.listSelectedElement list of
-    Just (_, booking) -> recoverIO $ CE.rematchBooking booking
+    Just (_, booking) -> recoverIO $ rematchBooking (sbookingID booking)
     Nothing -> return ()
 
 recoverIO :: IO () -> IO ()

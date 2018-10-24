@@ -2,12 +2,9 @@
 module CE.Models
     ( Site(..)
     , SiteID(..)
-    , BookingDemand(..)
-    , Path(..)
     , Location(..)
     , Position(..)
     , SRID(..)
-    , Booking(..)
     , Extent(..)
     , Coordinate(..)
     , DomainID(..)
@@ -61,29 +58,6 @@ instance ToJSON Coordinate where
         where coordinates = fmap (Number . S.fromFloatDigits) [x, y]
 
 
-data BookingDemand = BookingDemand SiteID [Path]
-
-instance ToJSON BookingDemand where
-    toJSON (BookingDemand siteID path) =
-        object
-            [ "itinerary" .= path
-            , "siteID" .= siteID
-            , "userID" .= String "1"
-            , "seatCount" .= Number 1
-            ]
-
-
-data Path = Path Location Location SiteID DomainID
-
-instance ToJSON Path where
-    toJSON (Path start end siteID domainID) =
-        object [ "start" .= start
-               , "end" .= end
-               , "siteID" .= siteID
-               , "domainID" .= domainID
-               ]
-
-
 data Location = Location Position
 
 instance ToJSON Location where
@@ -101,17 +75,6 @@ data SRID = SRID Integer
 instance ToJSON SRID where
     toJSON (SRID int) = Number $ fromInteger int
 
-
-data Booking = Booking
-                T.Text -- Booking ID
-                T.Text -- Status
-                (Maybe T.Text) -- Vehicle
-
-instance FromJSON Booking where
-    parseJSON = withObject "Booking" $ \v -> Booking
-        <$> v .: "bookingID"
-        <*> v .: "status"
-        <*> v .:? "vehicleID"
 
 data HttpResult a = HttpResult a
 

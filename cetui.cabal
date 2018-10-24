@@ -22,8 +22,8 @@ cabal-version:       >=1.10
 executable cetui
   main-is:             Main.hs
   other-modules:
-    CE.Client, UI.DomainChooser, UI.Bookings, CE.Models, UI.Event, UI.Status
-  build-depends:       base, wreq, aeson, lens, lens-aeson, text, brick, vty, vector, microlens, random, scientific, bytestring
+    CE.Client, UI.DomainChooser, UI.Bookings, CE.Models, UI.Event, UI.Status, CE.Core, CE.Vehicle, CE.Booking, UI.Bookings.Internal
+  build-depends:       base, wreq, aeson, lens, lens-aeson, text, brick, vty, vector, microlens, random, scientific, bytestring, containers
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:

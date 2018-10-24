@@ -2,11 +2,7 @@
 
 module CE.Client
   ( getSites
-  , getBookings
-  , sendBooking
   , getSiteExtent
-  , cancelBooking
-  , rematchBooking
   ) where
 
 import CE.Models
@@ -55,45 +51,3 @@ getSiteExtent (SiteID siteID) = do
           Just $ Coordinate (toRealFloat x) (toRealFloat y)
         _ -> Nothing
 
-getBookings :: SiteID -> IO [Booking]
-getBookings (SiteID siteID) = do
-  let url =
-        "http://localhost:9000/v1/travel/sites/" ++ (T.unpack siteID) ++
-        "/bookings?size=1000"
-  r <- get url
-  json <- asJSON r :: IO (Response (HttpResult [Booking]))
-  let (HttpResult bookings) = json ^. responseBody
-  return bookings
-
-sendBooking :: Site -> Extent -> IO ()
-sendBooking site (Extent tl br) = do
-  pickUp <- randomRIO (tl, br) :: IO Coordinate
-  dropOff <- randomRIO (tl, br) :: IO Coordinate
-  let booking =
-        BookingDemand
-          siteID
-          [Path (locationFor pickUp) (locationFor dropOff) siteID domainID]
-  res <- post url (toJSON booking)
-  return ()
-  where
-    url = "http://localhost:9000/v1/travel/users/1/bookings"
-    locationFor c = Location $ Position srid c
-    srid = SRID 4326
-    Site siteID _ _ = site
-    domainID = DomainID 1
-
-cancelBooking :: Booking -> IO ()
-cancelBooking (Booking bookingID _ _) = do
-  let url =
-        "http://localhost:9000/v2/travel/bookings/" ++ (T.unpack bookingID) ++
-        "/cancelByOperator"
-  _ <- put url BS.empty
-  return ()
-
-rematchBooking :: Booking -> IO ()
-rematchBooking (Booking bookingID _ _) = do
-  let url =
-        "http://localhost:9000/v2/travel/bookings/" ++ (T.unpack bookingID) ++
-        "/requestRematch"
-  _ <- post url BS.empty
-  return ()
