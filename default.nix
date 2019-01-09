@@ -1,5 +1,6 @@
-{ mkDerivation, aeson, base, brick, bytestring, lens, lens-aeson
-, microlens, random, scientific, stdenv, text, vector, vty, wreq
+{ mkDerivation, aeson, base, brick, bytestring, containers, lens
+, lens-aeson, microlens, random, scientific, stdenv, text, vector
+, vty, wreq
 }:
 mkDerivation {
   pname = "cetui";
@@ -8,8 +9,10 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    aeson base brick bytestring lens lens-aeson microlens random
-    scientific text vector vty wreq
+    aeson base brick bytestring containers lens lens-aeson microlens
+    random scientific text vector vty wreq
   ];
+  doHaddock = false;
+  doCheck = false;
   license = stdenv.lib.licenses.gpl3;
 }
