@@ -7,6 +7,7 @@ module CE.Booking
   , sendBookingDemand
   , cancelBooking
   , rematchBooking
+  , forceCloseBooking
   ) where
 
 import CE.Core
@@ -67,6 +68,14 @@ rematchBooking bid = do
   let url =
         "http://localhost:9000/v2/travel/bookings/" ++
         (T.unpack $ bookingIDToText bid) ++ "/requestRematch"
+  _ <- post url BS.empty
+  return ()
+
+forceCloseBooking :: BookingID -> IO ()
+forceCloseBooking bid = do
+  let url =
+        "http://localhost:9000/v2/travel/bookings/" ++
+        (T.unpack $ bookingIDToText bid) ++ "/forceClose"
   _ <- post url BS.empty
   return ()
 

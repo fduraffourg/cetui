@@ -61,7 +61,7 @@ drawUI (State site _ bookings _) = ui <=> helpStatus
     ui = B.borderWithLabel label $ C.center content
     content = L.renderList renderSBooking False bookings
 
-helpStatus = withAttr statusAttr $ txt "n: new - c: cancel - m: rematch"
+helpStatus = withAttr statusAttr $ txt "n: new - c: cancel - m: rematch - x: force close"
 
 handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 handleEvent s@(State (CE.Site siteID _ _) extent list _) (BT.VtyEvent e) =
@@ -70,6 +70,7 @@ handleEvent s@(State (CE.Site siteID _ _) extent list _) (BT.VtyEvent e) =
       liftIO (sendBookingDemand siteID extent) *> M.continue s
     V.EvKey (V.KChar 'c') _ -> liftIO (cancelSBooking list) >> M.continue s
     V.EvKey (V.KChar 'm') _ -> liftIO (rematchSBooking list) >> M.continue s
+    V.EvKey (V.KChar 'x') _ -> liftIO (forceCloseSBooking list) >> M.continue s
     _ ->
       (\l -> s {stateBookings = l}) <$>
       L.handleListEventVi L.handleListEvent e list >>=
@@ -97,6 +98,12 @@ rematchSBooking :: L.List () SBooking -> IO ()
 rematchSBooking list =
   case L.listSelectedElement list of
     Just (_, booking) -> recoverIO $ rematchBooking (sbookingID booking)
+    Nothing -> return ()
+
+forceCloseSBooking :: L.List () SBooking -> IO ()
+forceCloseSBooking list =
+  case L.listSelectedElement list of
+    Just (_, booking) -> recoverIO $ forceCloseBooking (sbookingID booking)
     Nothing -> return ()
 
 recoverIO :: IO () -> IO ()
