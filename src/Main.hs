@@ -105,7 +105,8 @@ switchToSelectedSite state site =
       return $
       state
         { stateSite = Just site
-        , stateView = StateViewBO $ BO.initialState site extent [] (stateVehicles state)
+        , stateView =
+            StateViewBO $ BO.initialState site extent [] (stateVehicles state)
         }
     createState Nothing =
       return $ state {stateView = StateViewMSG "Failed to get extent for site"}

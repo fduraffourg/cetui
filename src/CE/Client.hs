@@ -50,4 +50,3 @@ getSiteExtent (SiteID siteID) = do
         (Just (Number x), Just (Number y)) ->
           Just $ Coordinate (toRealFloat x) (toRealFloat y)
         _ -> Nothing
-

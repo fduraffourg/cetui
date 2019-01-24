@@ -6,12 +6,12 @@ module CE.Core
   , fetchList
   ) where
 
+import CE.Models (SiteID)
 import Control.Lens
 import Data.Aeson
 import Data.Aeson.Lens
 import qualified Data.Text as T
 import Network.Wreq
-import CE.Models (SiteID)
 
 class ListFromCE m where
   listFromCE :: IO [m]

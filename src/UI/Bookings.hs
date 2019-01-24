@@ -27,13 +27,13 @@ import qualified Data.Text as T
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 
+import CE.Booking
 import qualified CE.Client as CEC
+import CE.Core
 import qualified CE.Models as CE
 import CE.Vehicle
-import CE.Booking
-import CE.Core
-import qualified UI.Event as UE
 import UI.Bookings.Internal
+import qualified UI.Event as UE
 import UI.Status (statusAttr)
 
 data State = State
@@ -61,7 +61,8 @@ drawUI (State site _ bookings _) = ui <=> helpStatus
     ui = B.borderWithLabel label $ C.center content
     content = L.renderList renderSBooking False bookings
 
-helpStatus = withAttr statusAttr $ txt "n: new - c: cancel - m: rematch - x: force close"
+helpStatus =
+  withAttr statusAttr $ txt "n: new - c: cancel - m: rematch - x: force close"
 
 handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 handleEvent s@(State (CE.Site siteID _ _) extent list _) (BT.VtyEvent e) =
