@@ -34,6 +34,7 @@ import CE.Booking
 import CE.Core
 import qualified UI.Event as UE
 import UI.Bookings.Internal
+import UI.Status (statusAttr)
 
 data State = State
   { stateSite :: CE.Site
@@ -54,11 +55,13 @@ initialState site extent bookings vehicles =
     sbookings = listSBookings bookings vehicleNames
 
 drawUI :: State -> Widget ()
-drawUI (State site _ bookings _) = ui
+drawUI (State site _ bookings _) = ui <=> helpStatus
   where
     label = str ("Bookings for site " ++ show site)
     ui = B.borderWithLabel label $ C.center content
     content = L.renderList renderSBooking False bookings
+
+helpStatus = withAttr statusAttr $ txt "n: new - c: cancel - m: rematch"
 
 handleEvent :: State -> BrickEvent () UE.Event -> EventM () (Next State)
 handleEvent s@(State (CE.Site siteID _ _) extent list _) (BT.VtyEvent e) =
